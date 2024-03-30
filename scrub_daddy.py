@@ -1,145 +1,103 @@
 import copy
-import requests
+import os
 import json
-import yaml
 import time
 import logging
-import smtplib
-
-from bs4 import BeautifulSoup
+import base64
 from datetime import datetime
 from email.message import EmailMessage
+
+import google.auth
+import yaml
+import requests
+from bs4 import BeautifulSoup
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename='kijiji_scrapper.log', level=logging.DEBUG)
 
 start_time = time.time()
-output_filename = "output.txt"
+OUTPUT_FILENAME = "output.txt"
 KIJIJI_SITE_URL="https://www.kijiji.ca"
 GOOGLE_MAPS_URL="https://www.google.com/maps/place"
 
 CONFIG = {
         "mode": "info",
         "object_weight": { 
-            "type": "House",
-            "cost": 2000,
-            "size": 1500,
+            "type": "None",
+            "cost": 0,
+            "size": 0,
             
         },
-        "ideal_star_ranking": 4,
-        "number_of_bedrooms": 3,
-        "number_of_pages_scrubbed": 3
-    }
+        "ideal_star_ranking": 3,
+        "number_of_bedrooms": 1,
+        "number_of_pages_scrubbed": 1,
+}
 
-# def recursive_config_key_pull(dictionary, keys_list, predecessor=""):
-#     for key, value in dictionary.items():
-#         if type(value) is dict:
-#             keys_list.append(f"{predecessor}.{key}" if predecessor else f"{key}")
-#             recursive_config_key_pull(value, keys_list, predecessor=key)
-#         else:
-#             keys_list.append(f"{predecessor}.{key}" if predecessor else f"{key}")
-#     return keys_list
+PROVINCES = {
+    "Alberta": "c37l9003",
+    "Ontario": "c37l9004",
+}
 
-# def recursive_find_value_in_dict(dictionary, key):
-#     # print(f"    key: {key} | dictionary: {dictionary}")
-#     try:
-#         if "." in key:
-#             split_key = key.split(".")
-#             recursive_find_value_in_dict(dictionary[split_key[0]], split_key[1])
-#         value = dictionary.get(key)
-#         print(f"    [0] value: {value} | key: {key}")
-#         print(f"    dictionary.get(key): {dictionary.get(key)}")
-#         print(f"    dictionary[key]: {dictionary[key]}")
-#         if type(value) is dict:
-#             print(f"Check? {key}")
-#             return
-#         print(f"    [1] value: {value}")
-#         return value      
-#     except KeyError:
-#         return
-#     except AttributeError:
-#         return
+LOADED_CONFIG = {}
+if os.path.exists("config.yml"):
+    stream = open("config.yml", "r")
+    LOADED_CONFIG = yaml.safe_load(stream)
 
-# def recursive_set_value_in_dict(dictionary, keys_list):
-#     for key in keys_list:
-#         try:
-#             # print(f"key: {key}")
-#             if "." in key:
-#                 split_key = key.split(".")
-#                 # print(f"split_key[0]: {split_key[0]} | split_key[1]: {split_key[1]}")
+def recursive_config_key_pull(dictionary, keys_list, predecessor=""):
+    for key, value in dictionary.items():
+        if type(value) is dict:
+            keys_list.append(f"{predecessor}.{key}" if predecessor else f"{key}")
+            recursive_config_key_pull(value, keys_list, predecessor=key)
+        else:
+            keys_list.append(f"{predecessor}.{key}" if predecessor else f"{key}")
+    return keys_list
 
-#                 if type(dictionary[split_key[0]][split_key[1]]) is dict:
-#                     recursive_set_value_in_dict(dictionary[split_key[0]], split_key[1])
-#                 else:
-#                     new_value = recursive_find_value_in_dict(LOADED_CONFIG, key)
-#                     print(f"Setting key - key: {key} | value: {new_value}")
-#                     dictionary[split_key[0]][split_key[1]] = new_value
-#                     print()
-#                     continue
-#                 continue
-#             else:
-#                 if type(dictionary[key]) is dict:
-#                     print()
-#                     continue
-#                 new_value = recursive_find_value_in_dict(LOADED_CONFIG, key)
-            
-#             print(f"Setting key - key: {key} | value: {new_value}")
-#             dictionary[key] = new_value
-#             print()
-#         except KeyError:
-#             return dictionary
-#     return dictionary
+def recursive_find_value_in_dict(dictionary, key):
+    try:
+        if "." in key:
+            split_key = key.split(".")
+            value = recursive_find_value_in_dict(dictionary[split_key[0]], split_key[1])
+        else:
+            value = dictionary.get(key)
+        if type(value) is dict:
+            return
+        return value      
+    except KeyError:
+        return
+    except AttributeError:
+        return
 
+def recursive_set_value_in_dict(dictionary, keys_list, start_key=None):
+    for key in keys_list:
+        try:
+            if "." in key:
+                split_key = key.split(".")
+                recursive_set_value_in_dict(CONFIG[split_key[0]], [split_key[1]], split_key[0])        
+            elif type(dictionary[key]) is dict:
+                continue
+            else:
+                if start_key:
+                    loaded_value = recursive_find_value_in_dict(LOADED_CONFIG[start_key], key)
+                    if loaded_value:
+                        CONFIG[start_key][key] = loaded_value
+                else:
+                    loaded_value = recursive_find_value_in_dict(LOADED_CONFIG, key)
+                    if loaded_value:
+                        CONFIG[key] = loaded_value
+            continue
+        except KeyError:
+            return dictionary
 
-# with open("config.yml", "r") as stream:
-#     LOADED_CONFIG = yaml.safe_load(stream)
-#     keys_list = []
-#     recursive_config_key_pull(CONFIG, keys_list)
+def load_config():
+    keys_list = []
+    recursive_config_key_pull(CONFIG, keys_list)
+    recursive_set_value_in_dict(CONFIG, keys_list)
 
-#     print("#~# BASELINE CONFIG #~#")
-#     for key in keys_list:
-#         recursive_find_value_in_dict(CONFIG, key)
-#     print('---')
-    
-#     print("#~# LOADED CONFIG #~#")
-#     for key in keys_list:
-#         recursive_find_value_in_dict(LOADED_CONFIG, key)
-#     print('---')
-
-#     print("#~# PARSING CONFIG #~#")
-#     PARSED_CONFIG=recursive_set_value_in_dict(CONFIG, keys_list)
-#     print('---')
-
-#     print(PARSED_CONFIG)
-
-    # print("#~# PARSED CONFIG #~#")
-    # recursive_find_value_in_dict(PARSED_CONFIG, key)
-    # print('---')
-
-    # print("#~# PROCESSED CONFIG #~#")
-    # for key in keys_list:
-    #     recursive_find_value_in_dict(CONFIG, key)
-
-# https://www.kijiji.ca/b-apartments-condos/ontario/2+bedroom+den__3+bedrooms/c37l9004a27949001?pet-friendly=1&sort=dateDesc
-# 
-#
-# Locations
-#   alberta/<filter>/c37l9003
-#   ontario/<filter>/c37l9004
-#   britishcolumbia/<filter>/c37l9007
-#   
-# Filters
-#   1 item: 2+bedroom+den
-#   2 item: 2+bedroom+den__2+bedrooms
-#   3 item: 2+bedroom+den__2+bedrooms__3+bedrooms
-#
-# Pet Friendly
-#   pet-friendly=1
-
-# url = "https://www.kijiji.ca/b-apartments-condos/ontario/2+bedroom+den__3+bedrooms/c37l9004a27949001?pet-friendly=1&sort=dateDesc"
 
 base_url = "https://www.kijiji.ca/b-apartments-condos/ontario"
-end_url = "c37l9004a27949001?pet-friendly=1&sort=dateDesc"
+end_url = "a27949001?pet-friendly=1&sort=dateDesc"
 
 listing_template = {
     "title": "",
@@ -167,23 +125,23 @@ listing_template = {
 # listing_list=[]
 listing_list = [{"title": "3 BDR Townhouse for Rent", "href": "https://www.kijiji.ca//v-apartments-condos/kitchener-waterloo/3-bdr-townhouse-for-rent/1647656161", "price": {"cost": "$2,650", "utilities_included": "Not stated", "utilties": "Not Included"}, "size": "1,350 (sqft)", "move_in_date": "December 1, 2023", "appliances": ["Laundry (In Unit)", "Dishwasher", "Fridge / Freezer"], "air_conditioning": "No", "parking": "0", "outdoor_space_included": "Yard", "location": {"location": "21 Holborn Drive, Kitchener, ON", "google_maps": "https://www.google.com/maps/place/21+Holborn+Drive,+Kitchener,+ON"}, "number_of_bedrooms": "3", "number_of_bathrooms": "1", "type": "Townhouse", "stars": 1}, {"title": "STUDENTS - Furnished 3 Bedroom, 3 Bath, Available May 1, 2024", "href": "https://www.kijiji.ca//v-apartments-condos/kingston-on/students-furnished-3-bedroom-3-bath-available-may-1-2024/1683388114", "price": {"cost": "$4,245", "utilities_included": "Not stated", "utilties": "Not Included"}, "size": "936 (sqft)", "move_in_date": "May 1, 2024", "appliances": ["Laundry (In Unit)", "Dishwasher", "Fridge / Freezer"], "air_conditioning": "Yes", "parking": "0", "outdoor_space_included": "", "location": {"location": "Division Street, Kingston, ON", "google_maps": "https://www.google.com/maps/place/Division+Street,+Kingston,+ON"}, "number_of_bedrooms": "3", "number_of_bathrooms": "3", "type": "Apartment", "stars": 0}, {"title": "3 Bedroom house prime Oakville with huge backyard and 2 parking", "href": "https://www.kijiji.ca//v-apartments-condos/oakville-halton-region/3-bedroom-house-prime-oakville-with-huge-backyard-and-2-parking/1689412432", "price": {"cost": "$3,250", "utilities_included": "Not stated", "utilties": "Not Included"}, "size": "1,300 (sqft)", "move_in_date": "May 1, 2024", "appliances": ["Laundry (In Building)", "Dishwasher", "Fridge / Freezer"], "air_conditioning": "Yes", "parking": "2", "outdoor_space_included": "Yard", "location": {"location": "Bridge Road, Oakville, Ontario", "google_maps": "https://www.google.com/maps/place/Bridge+Road,+Oakville,+Ontario"}, "number_of_bedrooms": "3", "number_of_bathrooms": "1", "type": "House", "stars": 3}, {"title": "Spacious Apartment in House (Not Basement)", "href": "https://www.kijiji.ca//v-apartments-condos/markham-york-region/spacious-apartment-in-house-not-basement/1685271679", "price": {"cost": "$2,150", "utilities_included": "Not stated", "utilties": "Not Included"}, "size": "1,500 (sqft)", "move_in_date": "April 1, 2024", "appliances": ["Laundry (In Unit)", "Dishwasher", "Fridge / Freezer"], "air_conditioning": "Yes", "parking": "1", "outdoor_space_included": "Yard", "location": {"location": "420 Williamson Rd, Markham, ON L6E 0M7", "google_maps": "https://www.google.com/maps/place/420+Williamson+Rd,+Markham,+ON+L6E+0M7"}, "number_of_bedrooms": "3", "number_of_bathrooms": "2", "type": "House", "stars": 4}, {"title": "2+1 Bedroom 1 Bath Brand New Apartment for Rent $1,699/ month", "href": "https://www.kijiji.ca//v-apartments-condos/kitchener-waterloo/2-1-bedroom-1-bath-brand-new-apartment-for-rent-1-699-month/1688977731", "price": {"cost": "$1,699", "utilities_included": "Not stated", "utilties": "Not Included"}, "size": "910 (sqft)", "move_in_date": "March 25, 2024", "appliances": ["Laundry (In Unit)", "Fridge / Freezer"], "air_conditioning": "Yes", "parking": "1", "outdoor_space_included": "Not stated", "location": {"location": "Kitchener, ON N2N 2V7", "google_maps": "https://www.google.com/maps/place/Kitchener,+ON+N2N+2V7"}, "number_of_bedrooms": "2 + Den", "number_of_bathrooms": "1", "type": "Basement", "stars": 2}, {"title": "1BR & 2BR Brand New Condo units at King St W & Blue Jays Way !!", "href": "https://www.kijiji.ca//v-apartments-condos/city-of-toronto/1br-2br-brand-new-condo-units-at-king-st-w-blue-jays-way/1679080891", "price": {"cost": "$2,000", "utilities_included": "Not stated", "utilties": "Not Included"}, "size": "1,000 (sqft)", "move_in_date": "March 31, 2024", "appliances": ["Laundry (In Unit)", "Dishwasher", "Fridge / Freezer"], "air_conditioning": "Yes", "parking": "0", "outdoor_space_included": "", "location": {"location": "Mercer St, Toronto, ON, M5V 1H2", "google_maps": "https://www.google.com/maps/place/Mercer+St,+Toronto,+ON,+M5V+1H2"}, "number_of_bedrooms": "2 + Den", "number_of_bathrooms": "2", "type": "Condo", "stars": 1}, {"title": "2 bedroom + den and 3 bedroom suites now leasing!!", "href": "https://www.kijiji.ca//v-apartments-condos/city-of-toronto/2-bedroom-den-and-3-bedroom-suites-now-leasing/1682801806", "price": {"cost": "$3,300", "utilities_included": "Not stated", "utilties": "HydroHeatWater"}, "size": "986 (sqft)", "move_in_date": "Not stated", "appliances": ["Laundry (In Building)", "Dishwasher", "Fridge / Freezer"], "air_conditioning": "No", "parking": "0", "outdoor_space_included": "", "location": {"location": "20 Antrim Crescent, Scarborough, ON, M1P 4N3", "google_maps": "https://www.google.com/maps/place/20+Antrim+Crescent,+Scarborough,+ON,+M1P+4N3"}, "number_of_bedrooms": "2 + Den", "number_of_bathrooms": "2", "type": "Apartment", "stars": 0}, {"title": "Coming Fall 2024 - Brand New 3 Bedroom Apartments", "href": "https://www.kijiji.ca//v-apartments-condos/ottawa/coming-fall-2024-brand-new-3-bedroom-apartments/1686594452", "price": {"cost": "Please Contact", "utilities_included": "Not stated", "utilties": "Not Included"}, "size": "Not Available (sqft)", "move_in_date": "Not stated", "appliances": ["Laundry (In Unit)", "Laundry (In Building)", "Dishwasher", "Fridge / Freezer"], "air_conditioning": "Yes", "parking": "0", "outdoor_space_included": "", "location": {"location": "245-265 Rideau Street, Ottawa, ON, K1N 5Y2", "google_maps": "https://www.google.com/maps/place/245-265+Rideau+Street,+Ottawa,+ON,+K1N+5Y2"}, "number_of_bedrooms": "3", "number_of_bathrooms": "2", "type": "Apartment", "stars": 0}, {"title": "$500 Move-in Bonus | Spacious & Bright 2 Bed + Den in Downtown", "href": "https://www.kijiji.ca//v-apartments-condos/kitchener-waterloo/500-move-in-bonus-spacious-bright-2-bed-den-in-downtown/1674036684", "price": {"cost": "$2,799", "utilities_included": "Not stated", "utilties": "HydroHeatWater"}, "size": "1,065 (sqft)", "move_in_date": "February 12, 2024", "appliances": ["Laundry (In Unit)", "Dishwasher", "Fridge / Freezer"], "air_conditioning": "Yes", "parking": "1", "outdoor_space_included": "", "location": {"location": "120 Benton Street, Kitchener, ON, N2G 0C7", "google_maps": "https://www.google.com/maps/place/120+Benton+Street,+Kitchener,+ON,+N2G+0C7"}, "number_of_bedrooms": "2 + Den", "number_of_bathrooms": "2", "type": "Apartment", "stars": 1}, {"title": "Brand New 2 Bed + Den Apartments Across from Waterloo Park", "href": "https://www.kijiji.ca//v-apartments-condos/kitchener-waterloo/brand-new-2-bed-den-apartments-across-from-waterloo-park/1667049710", "price": {"cost": "$3,020", "utilities_included": "Not stated", "utilties": "HydroHeatWater"}, "size": "1,322 (sqft)", "move_in_date": "Not stated", "appliances": ["Laundry (In Unit)", "Dishwasher", "Fridge / Freezer"], "air_conditioning": "Yes", "parking": "1", "outdoor_space_included": "", "location": {"location": "12 Merchant Ave, Waterloo, ON, N2L 0E6", "google_maps": "https://www.google.com/maps/place/12+Merchant+Ave,+Waterloo,+ON,+N2L+0E6"}, "number_of_bedrooms": "2 + Den", "number_of_bathrooms": "2", "type": "Apartment", "stars": 1}, {"title": "2 Bedroom + 2 Baths w/Den in Uptown Waterloo", "href": "https://www.kijiji.ca//v-apartments-condos/kitchener-waterloo/2-bedroom-2-baths-w-den-in-uptown-waterloo/1684151196", "price": {"cost": "$3,199", "utilities_included": "Not stated", "utilties": "HydroHeatWater"}, "size": "1,404 (sqft)", "move_in_date": "Not stated", "appliances": ["Laundry (In Unit)", "Dishwasher"], "air_conditioning": "Yes", "parking": "2", "outdoor_space_included": "", "location": {"location": "20 Barrel Yards Blvd., Waterloo, ON, N2L 0C3", "google_maps": "https://www.google.com/maps/place/20+Barrel+Yards+Blvd.,+Waterloo,+ON,+N2L+0C3"}, "number_of_bedrooms": "2 + Den", "number_of_bathrooms": "2", "type": "Apartment", "stars": 1}]
 
-def build_url(page=0):
+def build_url(province, page=0):
     url = ""
+    parsed_end_url = f"{PROVINCES[province]}{end_url}"
 
     if CONFIG['number_of_bedrooms'] == 3:
         bedroom_string = "2+bedroom+den__3+bedrooms"
 
-    # assumes this is the first page being called
     if page == 0:
-        return f"{base_url}/{bedroom_string}/{end_url}"
+        return f"{base_url}/{bedroom_string}/{parsed_end_url}"
     else:
-        return f"{base_url}/page-{page}/{bedroom_string}/{end_url}"
+        return f"{base_url}/page-{page}/{bedroom_string}/{parsed_end_url}"
 
-def process():
+def process(province):
     page_counter = 0
     while page_counter < CONFIG['number_of_pages_scrubbed']:
         page_counter=page_counter+1
-        response = requests.get(build_url(page_counter))
+        response = requests.get(build_url(province, page_counter))
 
         if response.status_code == 200:
             logger.debug("Making initial call to Kijiji")
@@ -321,8 +279,9 @@ Link: {item['href']}
 
 """
 
-def print_listings_to_file():
+def print_listings_to_file(province):
     high_stars_listings_list = [item for item in listing_list if item['stars'] >= 4]
+    output_filename = f"{province}-{OUTPUT_FILENAME}"
 
     open(output_filename, 'w').close()
     with open(output_filename, "a") as fh:
@@ -334,27 +293,47 @@ def print_listings_to_file():
         for item in listing_list:
             fh.write(create_email_from_template(item))
 
-def email_listings():
-    msg = EmailMessage()
-    with open(output_filename) as fh: 
-        msg.set_content(fh.read())
-    
-    msg['Subject'] = 'New Listings'
-    msg['From'] = "phillyp.henning@automated.solutions.com"
-    msg['To'] = "phillyp.henning@gmail.com"
-    
+def email_listings(province):
+    output_filename = f"{province}-{OUTPUT_FILENAME}"
+    creds, _ = google.auth.default()
+
     try:
-        smtp_server = smtplib.SMTP('localhost')
-        smtp_server.send_message(msg)
+        service = build("gmail", "v1", credentials=creds)
+        message = EmailMessage()
+        message.set_content(open(output_filename, 'r').read())
+        message["To"] = "philh@bitovi.com"
+        message["From"] = "phillyp.henning@gmail.com"
+        message["Subject"] = f"New Listings - {province}"
+
+        # encoded message
+        encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+
+        create_message = {"raw": encoded_message}
+        # pylint: disable=E1101
+        send_message = (
+            service.users()
+            .messages()
+            .send(userId="me", body=create_message)
+            .execute()
+        )
+        print(f'Message Id: {send_message["id"]}')
+
+
+        return
+        # sg = SendGridAPIClient(api_key=os.environ.get("SENDGRID_API_TOKEN"))
+        # response = sg.client.mail.send.post(request_body=mail.get())
+        # print(response.status_code)
+        # print(response.body)
+
     except Exception as e:
         logger.error(e)
         exit(2)
-    finally:
-        smtp_server.quit()
 
 if __name__ == "__main__":
     logger.info("scrapper started")
-    process()
-    print_listings_to_file()
-    # email_listings()
+    load_config()
+    for province in PROVINCES:
+        process(province)
+        print_listings_to_file(province)
+        # email_listings(province)
     logger.info("scrapper finished")

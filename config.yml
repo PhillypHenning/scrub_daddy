@@ -1,0 +1,10 @@
+mode: info
+
+object_weight: 
+  type: House
+  cost: 2000
+  size: 1500
+
+ideal_star_ranking: 4
+number_of_bedrooms: 3
+number_of_pages_scrubbed: 3

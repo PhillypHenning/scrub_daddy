@@ -2,6 +2,7 @@
 env/
 
 # workspace
-config.yml
 kijiji_scrapper.log
-output.txt
+*output.txt
+ToDo.md
+*private*
