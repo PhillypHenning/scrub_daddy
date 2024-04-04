@@ -36,8 +36,14 @@ CONFIG = {
 }
 
 PROVINCES = {
-    "Alberta": "c37l9003",
-    "Ontario": "c37l9004",
+    "Alberta": {
+        "url_part": "c37l9003",
+        "search_for": "Alberta",
+    },
+    "Ontario": {
+        "url_part": "c37l9004",
+        "search_for": "Ontario",
+    }
 }
 
 LOADED_CONFIG = {}
@@ -128,7 +134,7 @@ listing_list=[]
 
 def build_url(province, page_counter):
     url = ""
-    parsed_end_url = f"{PROVINCES[province]}{end_url}"
+    parsed_end_url = f"{PROVINCES[province]['url_part']}{end_url}"
 
     if CONFIG['number_of_bedrooms'] == 3:
         bedroom_string = "2+bedroom+den__3+bedrooms"
@@ -174,6 +180,9 @@ def process(province):
 
                         if response.status_code == 200:
                             listing_soup = BeautifulSoup(response.text, 'html.parser')
+
+                            if PROVINCES[province]["search_for"] not in listing_soup:
+                                break
 
                             listing_obj['posted'] = listing_soup.find(class_='datePosted-1776470403').get_text()
                             if listing_soup.find(class_='priceWrapper-3915768379').find("span"):
