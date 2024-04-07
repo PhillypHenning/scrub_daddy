@@ -28,6 +28,7 @@ CONFIG = {
             "type": "None",
             "cost": 0,
             "size": 0,
+            "max_cost": 0,
             
         },
         "ideal_star_ranking": 3,
@@ -45,6 +46,37 @@ PROVINCES = {
         "search_for": "Ontario",
     }
 }
+
+
+base_url = "https://www.kijiji.ca/b-apartments-condos/ontario"
+end_url = "a27949001?pet-friendly=1&sort=dateDesc"
+
+listing_template = {
+    "title": "",
+    "href": "",
+    "price": {
+        "cost": 0,
+        "utilities_included": "Not stated"
+    },
+    "size": "Not stated",
+    "move_in_date": "Not stated",
+    "appliances": [],
+    "air_conditioning": "Not stated",
+    "parking": "Not stated",
+    "outdoor_space_included": "Not stated",
+    "location": {
+        "location": "",
+        "google_maps": ""
+    }, 
+    "number_of_bedrooms": "",
+    "number_of_bathrooms": "",
+    "type": "",
+    "stars": 0,
+    "posted": ""
+}
+
+listing_list=[]
+
 
 LOADED_CONFIG = {}
 if os.path.exists("config.yml"):
@@ -101,37 +133,6 @@ def load_config():
     recursive_config_key_pull(CONFIG, keys_list)
     recursive_set_value_in_dict(CONFIG, keys_list)
 
-
-base_url = "https://www.kijiji.ca/b-apartments-condos/ontario"
-end_url = "a27949001?pet-friendly=1&sort=dateDesc"
-
-listing_template = {
-    "title": "",
-    "href": "",
-    "price": {
-        "cost": 0,
-        "utilities_included": "Not stated"
-    },
-    "size": "Not stated",
-    "move_in_date": "Not stated",
-    "appliances": [],
-    "air_conditioning": "Not stated",
-    "parking": "Not stated",
-    "outdoor_space_included": "Not stated",
-    "location": {
-        "location": "",
-        "google_maps": ""
-    }, 
-    "number_of_bedrooms": "",
-    "number_of_bathrooms": "",
-    "type": "",
-    "stars": 0,
-    "posted": ""
-}
-
-listing_list=[]
-# listing_list = [{"title": "3 BDR Townhouse for Rent", "href": "https://www.kijiji.ca//v-apartments-condos/kitchener-waterloo/3-bdr-townhouse-for-rent/1647656161", "price": {"cost": "$2,650", "utilities_included": "Not stated", "utilties": "Not Included"}, "size": "1,350 (sqft)", "move_in_date": "December 1, 2023", "appliances": ["Laundry (In Unit)", "Dishwasher", "Fridge / Freezer"], "air_conditioning": "No", "parking": "0", "outdoor_space_included": "Yard", "location": {"location": "21 Holborn Drive, Kitchener, ON", "google_maps": "https://www.google.com/maps/place/21+Holborn+Drive,+Kitchener,+ON"}, "number_of_bedrooms": "3", "number_of_bathrooms": "1", "type": "Townhouse", "stars": 1}, {"title": "STUDENTS - Furnished 3 Bedroom, 3 Bath, Available May 1, 2024", "href": "https://www.kijiji.ca//v-apartments-condos/kingston-on/students-furnished-3-bedroom-3-bath-available-may-1-2024/1683388114", "price": {"cost": "$4,245", "utilities_included": "Not stated", "utilties": "Not Included"}, "size": "936 (sqft)", "move_in_date": "May 1, 2024", "appliances": ["Laundry (In Unit)", "Dishwasher", "Fridge / Freezer"], "air_conditioning": "Yes", "parking": "0", "outdoor_space_included": "", "location": {"location": "Division Street, Kingston, ON", "google_maps": "https://www.google.com/maps/place/Division+Street,+Kingston,+ON"}, "number_of_bedrooms": "3", "number_of_bathrooms": "3", "type": "Apartment", "stars": 0}, {"title": "3 Bedroom house prime Oakville with huge backyard and 2 parking", "href": "https://www.kijiji.ca//v-apartments-condos/oakville-halton-region/3-bedroom-house-prime-oakville-with-huge-backyard-and-2-parking/1689412432", "price": {"cost": "$3,250", "utilities_included": "Not stated", "utilties": "Not Included"}, "size": "1,300 (sqft)", "move_in_date": "May 1, 2024", "appliances": ["Laundry (In Building)", "Dishwasher", "Fridge / Freezer"], "air_conditioning": "Yes", "parking": "2", "outdoor_space_included": "Yard", "location": {"location": "Bridge Road, Oakville, Ontario", "google_maps": "https://www.google.com/maps/place/Bridge+Road,+Oakville,+Ontario"}, "number_of_bedrooms": "3", "number_of_bathrooms": "1", "type": "House", "stars": 3}, {"title": "Spacious Apartment in House (Not Basement)", "href": "https://www.kijiji.ca//v-apartments-condos/markham-york-region/spacious-apartment-in-house-not-basement/1685271679", "price": {"cost": "$2,150", "utilities_included": "Not stated", "utilties": "Not Included"}, "size": "1,500 (sqft)", "move_in_date": "April 1, 2024", "appliances": ["Laundry (In Unit)", "Dishwasher", "Fridge / Freezer"], "air_conditioning": "Yes", "parking": "1", "outdoor_space_included": "Yard", "location": {"location": "420 Williamson Rd, Markham, ON L6E 0M7", "google_maps": "https://www.google.com/maps/place/420+Williamson+Rd,+Markham,+ON+L6E+0M7"}, "number_of_bedrooms": "3", "number_of_bathrooms": "2", "type": "House", "stars": 4}, {"title": "2+1 Bedroom 1 Bath Brand New Apartment for Rent $1,699/ month", "href": "https://www.kijiji.ca//v-apartments-condos/kitchener-waterloo/2-1-bedroom-1-bath-brand-new-apartment-for-rent-1-699-month/1688977731", "price": {"cost": "$1,699", "utilities_included": "Not stated", "utilties": "Not Included"}, "size": "910 (sqft)", "move_in_date": "March 25, 2024", "appliances": ["Laundry (In Unit)", "Fridge / Freezer"], "air_conditioning": "Yes", "parking": "1", "outdoor_space_included": "Not stated", "location": {"location": "Kitchener, ON N2N 2V7", "google_maps": "https://www.google.com/maps/place/Kitchener,+ON+N2N+2V7"}, "number_of_bedrooms": "2 + Den", "number_of_bathrooms": "1", "type": "Basement", "stars": 2}, {"title": "1BR & 2BR Brand New Condo units at King St W & Blue Jays Way !!", "href": "https://www.kijiji.ca//v-apartments-condos/city-of-toronto/1br-2br-brand-new-condo-units-at-king-st-w-blue-jays-way/1679080891", "price": {"cost": "$2,000", "utilities_included": "Not stated", "utilties": "Not Included"}, "size": "1,000 (sqft)", "move_in_date": "March 31, 2024", "appliances": ["Laundry (In Unit)", "Dishwasher", "Fridge / Freezer"], "air_conditioning": "Yes", "parking": "0", "outdoor_space_included": "", "location": {"location": "Mercer St, Toronto, ON, M5V 1H2", "google_maps": "https://www.google.com/maps/place/Mercer+St,+Toronto,+ON,+M5V+1H2"}, "number_of_bedrooms": "2 + Den", "number_of_bathrooms": "2", "type": "Condo", "stars": 1}, {"title": "2 bedroom + den and 3 bedroom suites now leasing!!", "href": "https://www.kijiji.ca//v-apartments-condos/city-of-toronto/2-bedroom-den-and-3-bedroom-suites-now-leasing/1682801806", "price": {"cost": "$3,300", "utilities_included": "Not stated", "utilties": "HydroHeatWater"}, "size": "986 (sqft)", "move_in_date": "Not stated", "appliances": ["Laundry (In Building)", "Dishwasher", "Fridge / Freezer"], "air_conditioning": "No", "parking": "0", "outdoor_space_included": "", "location": {"location": "20 Antrim Crescent, Scarborough, ON, M1P 4N3", "google_maps": "https://www.google.com/maps/place/20+Antrim+Crescent,+Scarborough,+ON,+M1P+4N3"}, "number_of_bedrooms": "2 + Den", "number_of_bathrooms": "2", "type": "Apartment", "stars": 0}, {"title": "Coming Fall 2024 - Brand New 3 Bedroom Apartments", "href": "https://www.kijiji.ca//v-apartments-condos/ottawa/coming-fall-2024-brand-new-3-bedroom-apartments/1686594452", "price": {"cost": "Please Contact", "utilities_included": "Not stated", "utilties": "Not Included"}, "size": "Not Available (sqft)", "move_in_date": "Not stated", "appliances": ["Laundry (In Unit)", "Laundry (In Building)", "Dishwasher", "Fridge / Freezer"], "air_conditioning": "Yes", "parking": "0", "outdoor_space_included": "", "location": {"location": "245-265 Rideau Street, Ottawa, ON, K1N 5Y2", "google_maps": "https://www.google.com/maps/place/245-265+Rideau+Street,+Ottawa,+ON,+K1N+5Y2"}, "number_of_bedrooms": "3", "number_of_bathrooms": "2", "type": "Apartment", "stars": 0}, {"title": "$500 Move-in Bonus | Spacious & Bright 2 Bed + Den in Downtown", "href": "https://www.kijiji.ca//v-apartments-condos/kitchener-waterloo/500-move-in-bonus-spacious-bright-2-bed-den-in-downtown/1674036684", "price": {"cost": "$2,799", "utilities_included": "Not stated", "utilties": "HydroHeatWater"}, "size": "1,065 (sqft)", "move_in_date": "February 12, 2024", "appliances": ["Laundry (In Unit)", "Dishwasher", "Fridge / Freezer"], "air_conditioning": "Yes", "parking": "1", "outdoor_space_included": "", "location": {"location": "120 Benton Street, Kitchener, ON, N2G 0C7", "google_maps": "https://www.google.com/maps/place/120+Benton+Street,+Kitchener,+ON,+N2G+0C7"}, "number_of_bedrooms": "2 + Den", "number_of_bathrooms": "2", "type": "Apartment", "stars": 1}, {"title": "Brand New 2 Bed + Den Apartments Across from Waterloo Park", "href": "https://www.kijiji.ca//v-apartments-condos/kitchener-waterloo/brand-new-2-bed-den-apartments-across-from-waterloo-park/1667049710", "price": {"cost": "$3,020", "utilities_included": "Not stated", "utilties": "HydroHeatWater"}, "size": "1,322 (sqft)", "move_in_date": "Not stated", "appliances": ["Laundry (In Unit)", "Dishwasher", "Fridge / Freezer"], "air_conditioning": "Yes", "parking": "1", "outdoor_space_included": "", "location": {"location": "12 Merchant Ave, Waterloo, ON, N2L 0E6", "google_maps": "https://www.google.com/maps/place/12+Merchant+Ave,+Waterloo,+ON,+N2L+0E6"}, "number_of_bedrooms": "2 + Den", "number_of_bathrooms": "2", "type": "Apartment", "stars": 1}, {"title": "2 Bedroom + 2 Baths w/Den in Uptown Waterloo", "href": "https://www.kijiji.ca//v-apartments-condos/kitchener-waterloo/2-bedroom-2-baths-w-den-in-uptown-waterloo/1684151196", "price": {"cost": "$3,199", "utilities_included": "Not stated", "utilties": "HydroHeatWater"}, "size": "1,404 (sqft)", "move_in_date": "Not stated", "appliances": ["Laundry (In Unit)", "Dishwasher"], "air_conditioning": "Yes", "parking": "2", "outdoor_space_included": "", "location": {"location": "20 Barrel Yards Blvd., Waterloo, ON, N2L 0C3", "google_maps": "https://www.google.com/maps/place/20+Barrel+Yards+Blvd.,+Waterloo,+ON,+N2L+0C3"}, "number_of_bedrooms": "2 + Den", "number_of_bathrooms": "2", "type": "Apartment", "stars": 1}]
-
 def build_url(province, page_counter):
     url = ""
     parsed_end_url = f"{PROVINCES[province]['url_part']}{end_url}"
@@ -180,13 +181,20 @@ def process(province):
 
                         if response.status_code == 200:
                             listing_soup = BeautifulSoup(response.text, 'html.parser')
+                            listing_soup_text = str(listing_soup)
 
-                            if PROVINCES[province]["search_for"] not in listing_soup:
+                            if f"{PROVINCES[province]['search_for']}" not in listing_soup_text:
                                 break
-
+                            
                             listing_obj['posted'] = listing_soup.find(class_='datePosted-1776470403').get_text()
                             if listing_soup.find(class_='priceWrapper-3915768379').find("span"):
-                                listing_obj['price']['cost'] = listing_soup.find(class_='priceWrapper-3915768379').find("span").get_text()
+                                price_found = listing_soup.find(class_='priceWrapper-3915768379').find("span").get_text()
+                                i_price_found = int(price_found[1:].replace(",",""))
+                                if CONFIG['object_weight']['max_cost'] != 0:
+                                    if i_price_found > CONFIG['object_weight']['max_cost']:
+                                        break
+                                listing_obj['price']['cost'] = price_found
+
                             listing_obj['price']['utilties'] = listing_soup.find(class_='attributeGroupContainer-1655609067').find("ul").get_text()
                             
                             listing_obj['location']['location'] = listing_soup.find(class_='address-2094065249').get_text()
@@ -339,12 +347,19 @@ def email_listings(province):
     except Exception as e:
         logger.error(e)
         exit(2)
+    
+def clean_listings():
+    listing_list = []
 
 if __name__ == "__main__":
     logger.info("scrapper started")
-    load_config()
-    for province in PROVINCES:
-        process(province)
-        print_listings_to_file(province)
-        # email_listings(province)
+    try:
+        load_config()
+        for province in PROVINCES:
+            process(province)
+            print_listings_to_file(province)
+            clean_listings()
+            # email_listings(province)
+    except KeyboardInterrupt:
+        exit(0)
     logger.info("scrapper finished")
